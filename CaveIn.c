@@ -20,8 +20,8 @@ float charFrameX=0,charFrameY=0;
 float vel[2];
 int groundW=512,groundH=128;
 int numGround=1;
-int spawnfreq=1;
-bool running=true,jump=true;
+int spawnfreqV=1,spawnfreqH=0;
+bool running=true,paused=false,jump=true;
 vector<int> stalactites;  // contents: stalacX,stalacY,stalacFrame,stalacDir
 
 GLubyte rectangleTexture[512][128][3],charTexture[16][128][3];
@@ -39,8 +39,10 @@ void init(){
   charH=32;
   charFrameX=0;
   charFrameY=0;
-  spawnfreq=1;
+  spawnfreqV=1;
+  spawnfreqH=0;
   running=true;
+  paused=false;
   jump=true;
 
   charCoords[0] = wsize;
@@ -177,21 +179,36 @@ void display(){
   //glEnable(GL_BLEND);
   //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
   glBindTexture(GL_TEXTURE_2D,stalacObj);
-  int v1[2],v2[2],v3[2],v4[2],v5[2];
+  int v1[2],v2[2],v3[2],v4[2],v5[2],dir;
   for(i=0;i<stalactites.size();i+=4){
+    if(stalactites[i+3]<0) dir=-1;
+    else dir=1;
     // assign vertices according to direction
     v1[0] = stalactites[i]-(stalactites[i+3]?0:stalacW/2);
     v1[1] = stalactites[i+1]-(stalactites[i+3]?stalacW/2:0);
     v2[0] = stalactites[i]+(stalactites[i+3]?0:stalacW/2);
     v2[1] = stalactites[i+1]+(stalactites[i+3]?stalacW/2:0);
-    v3[0] = stalactites[i]+(stalactites[i+3]?(stalactites[i+3]>0?stalacH:-stalacH):0);
+    v3[0] = stalactites[i]+(stalactites[i+3]?dir*stalacH:0);
     v3[1] = stalactites[i+1]-(stalactites[i+3]?0:stalacH);
+    if(stalactites[i+2]){
+      v4[0] = stalactites[i] + stalactites[i+3]?.625*dir*stalacH:-stalacW;
+      v4[1] = stalactites[i+1] + stalactites[i+3]?-stalacW:-.625*stalacH;
+      v5[0] = stalactites[i] + stalactites[i+3]?.625*dir*stalacH:stalacW;
+      v5[1] = stalactites[i+1] + stalactites[i+3]?stalacW:-.625*stalacH;
+    }
+    else v4[0]=v4[1]=v5[0]=v5[1]=0;
 
     // draw
-    glBegin(GL_TRIANGLES);
+    glBegin(GL_POLYGON);
     glTexCoord2f(0.0,0.5+.5*stalactites[i+2]); glVertex2iv(v1);
     glTexCoord2f(1.0,0.5+.5*stalactites[i+2]); glVertex2iv(v2);
+    /*if(stalactites[i+2]){
+      glTexCoord2f(1.0,.8125); glVertex2iv(v5);
+    }*/
     glTexCoord2f(0.5,0.0+.5*stalactites[i+2]); glVertex2iv(v3);
+    /*if(stalactites[i+2]){
+      glTexCoord2f(0.0,.8125); glVertex2iv(v4);
+      }*/
     glEnd();
   }
   //glDisable(GL_BLEND);
@@ -206,9 +223,14 @@ void display(){
 
   // difficulty
   i=0;
-  while(spawnfreq/(int)pow(10.0,i)) i++;  // find # of digits of score
-  sprintf(scoreStr,"%d",spawnfreq);
+  while(spawnfreqV/(int)pow(10.0,i)) i++;  // find # of digits of score
+  sprintf(scoreStr,"%d",spawnfreqV);
   glRasterPos2i(2*wsize-10*i,wsize-40);
+  printString(scoreStr);
+  i=0;
+  while(spawnfreqH/(int)pow(10.0,i)) i++;  // find # of digits of score
+  sprintf(scoreStr,"%d",spawnfreqH);
+  glRasterPos2i(2*wsize-10*i,wsize-60);
   printString(scoreStr);
 
   // Flush
@@ -224,6 +246,8 @@ void reshape(int w,int h){
   glLoadIdentity();
 }
 
+void delay(int);  // referenced in keyboard()
+
 void keyboard(unsigned char key,int x,int y){
   switch(key){
   case 'q':
@@ -235,6 +259,13 @@ void keyboard(unsigned char key,int x,int y){
   case 'R':
     init();
     break;
+  case 'p':
+  case 'P':
+    if(paused){
+      glutTimerFunc(50,delay,0);  // reset timer
+      paused=false;
+    }
+    else paused=true;
   default:
     break;
   }
@@ -337,25 +368,25 @@ void movement(){
 void enemies(){
   int i,j;
   // generate
-  if(rand()%10 < spawnfreq){  // random downward
+  if(rand()%10 < spawnfreqV){  // random downward
     stalactites.push_back(rand()%(2*wsize));  // X
     stalactites.push_back(wsize+stalacH);     // Y
     stalactites.push_back(0);                 // frame (not broken / broken)
     stalactites.push_back(0);                 // X direction
   }
-  if(running && rand()%20<spawnfreq-5){  // aimed downward
+  if(running && rand()%20<spawnfreqV-5){  // aimed downward
     stalactites.push_back(charCoords[0]-100+rand()%200);
     stalactites.push_back(wsize+stalacH);
     stalactites.push_back(0);
     stalactites.push_back(0);
   }
-  if(rand()%20 < spawnfreq-10){  // random rightward
+  if(rand()%30 < spawnfreqH-1){  // random rightward
     stalactites.push_back(-stalacH);
     stalactites.push_back(rand()%(4*wsize/5)+wsize/5+stalacW/2);
     stalactites.push_back(0);
     stalactites.push_back(10);
   }
-  if(rand()%20 < spawnfreq-10){  // random leftward
+  if(rand()%30 < spawnfreqH-1){  // random leftward
     stalactites.push_back(2*wsize+stalacH);
     stalactites.push_back(rand()%(4*wsize/5)+wsize/5+stalacW/2);
     stalactites.push_back(0);
@@ -379,7 +410,14 @@ void enemies(){
   }
 
   // increase difficulty
-  if(running && spawnfreq<35 && rand()%100==0) spawnfreq++;
+  if(running && spawnfreqV<35 && rand()%100==0){
+    spawnfreqV++;
+    if(spawnfreqH) spawnfreqH++;
+  }
+  if(running && spawnfreqV>10 && !spawnfreqH){
+    spawnfreqV = 0;
+    spawnfreqH = 1;
+  }
 }
 
 void hitDetection(){
@@ -427,8 +465,8 @@ void delay(int t){
   hitDetection();
 
   glutPostRedisplay();
-  glutTimerFunc(50,delay,0);  // reset timer
   if(running) score++;
+  if(!paused) glutTimerFunc(50,delay,0);  // reset timer
 }
 
 int main(int argc,char* argv[]){
