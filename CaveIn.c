@@ -27,8 +27,6 @@ vector<int> stalactites;  // contents: stalacX,stalacY,stalacFrame,stalacDir
 GLubyte rectangleTexture[512][128][3],charTexture[16][128][3];
 GLubyte stalacTexture[16][64][3];
 GLuint rectangleObj,charObj,stalacObj;
-//float groundWratio,groundHratio;
-//float charWratio,charHratio;
 
 void init(){
   int i,j;
@@ -69,9 +67,6 @@ void createTextures(){
     while((j++)%4) fread(filler,1,1,fp);
   }
   fclose(fp);
-  /*charWratio = charW / exp2(ceil(log2(charW)));  // ratio to next larger power of 2
-    charHratio = charH / exp2(ceil(log2(charH)));*/
-  //gluScaleImage(GL_RGB,10,20,GL_UNSIGNED_BYTE,tmpTexture,16,32,GL_UNSIGNED_BYTE,charTexture);
 
   fp = fopen("rectangleTexture.bmp","rb");
   if(!fp){
@@ -86,8 +81,6 @@ void createTextures(){
     while((j++)%4) fread(filler,1,1,fp);
   }
   fclose(fp);
-  /*groundWratio = groundW / exp2(ceil(log2(groundW)));  // ratio to next larger power of 2
-    groundHratio = groundH / exp2(ceil(log2(groundH)));*/
 
   fp = fopen("stalacTexture.bmp","rb");
   if(!fp){
@@ -99,10 +92,9 @@ void createTextures(){
     for(j=0;j<stalacH*stalacFrames;j++){
       for(k=2;k>=0;k--){
 	fread(&stalacTexture[i][j][k],1,1,fp);
-	//stalacTexture[i][j][k] /= 255.0;
       }
-      //if(stalacTexture[i][j][0]==0.0 && stalacTexture[i][j][1]==0.0 && stalacTexture[i][j][2]==0.0) stalacTexture[i][j][3]=0.0;
-      //else stalacTexture[i][j][3]=1.0;
+      /*if(stalacTexture[i][j][0]==0.0 && stalacTexture[i][j][1]==0.0 && stalacTexture[i][j][2]==0.0) stalacTexture[i][j][3]=0.0;
+	else stalacTexture[i][j][3]=1.0;*/
     }
     while((j++)%4) fread(filler,1,1,fp);
   }
@@ -152,28 +144,22 @@ void display(){
 
   // character
   glBindTexture(GL_TEXTURE_2D,charObj);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+  glTranslatef(charCoords[0],charCoords[1],0.0);
+  if(!running) glRotatef(-90.0,0.0,0.0,1.0);
+
   glBegin(GL_QUADS);
-  if(running){
-    glTexCoord2f(charFrameX,trunc(charFrameY)/charFrames);
-    glVertex2i(charCoords[0]-charW/2,charCoords[1]-charH/2);
-    glTexCoord2f(charFrameX,(trunc(charFrameY)+1)/charFrames);
-    glVertex2i(charCoords[0]-charW/2,charCoords[1]+charH/2);
-    glTexCoord2f(!charFrameX,(trunc(charFrameY)+1)/charFrames);
-    glVertex2i(charCoords[0]+charW/2,charCoords[1]+charH/2);
-    glTexCoord2f(!charFrameX,trunc(charFrameY)/charFrames);
-    glVertex2i(charCoords[0]+charW/2,charCoords[1]-charH/2);
-  }
-  else{
-    glTexCoord2f(charFrameX,trunc(charFrameY)/charFrames);
-    glVertex2i(charCoords[0]-charW/2,charCoords[1]+charH/2);
-    glTexCoord2f(charFrameX,(trunc(charFrameY)+1)/charFrames);
-    glVertex2i(charCoords[0]+charW/2,charCoords[1]+charH/2);
-    glTexCoord2f(!charFrameX,(trunc(charFrameY)+1)/charFrames);
-    glVertex2i(charCoords[0]+charW/2,charCoords[1]-charH/2);
-    glTexCoord2f(!charFrameX,trunc(charFrameY)/charFrames);
-    glVertex2i(charCoords[0]-charW/2,charCoords[1]-charH/2);
-  }
+  glTexCoord2f(charFrameX,trunc(charFrameY)/charFrames);
+  glVertex2i(-charW/2,-charH/2);
+  glTexCoord2f(charFrameX,(trunc(charFrameY)+1)/charFrames);
+  glVertex2i(-charW/2,charH/2);
+  glTexCoord2f(!charFrameX,(trunc(charFrameY)+1)/charFrames);
+  glVertex2i(charW/2,charH/2);
+  glTexCoord2f(!charFrameX,trunc(charFrameY)/charFrames);
+  glVertex2i(charW/2,-charH/2);
   glEnd();
+  glLoadIdentity();
 
   // stalactites
   //glEnable(GL_BLEND);
@@ -223,12 +209,12 @@ void display(){
 
   // difficulty
   i=0;
-  while(spawnfreqV/(int)pow(10.0,i)) i++;  // find # of digits of score
+  while(spawnfreqV/(int)pow(10.0,i)) i++;  // find # of digits
   sprintf(scoreStr,"%d",spawnfreqV);
   glRasterPos2i(2*wsize-10*i,wsize-40);
   printString(scoreStr);
   i=0;
-  while(spawnfreqH/(int)pow(10.0,i)) i++;  // find # of digits of score
+  while(spawnfreqH/(int)pow(10.0,i)) i++;  // find # of digits
   sprintf(scoreStr,"%d",spawnfreqH);
   glRasterPos2i(2*wsize-10*i,wsize-60);
   printString(scoreStr);
@@ -310,7 +296,7 @@ void keyboardSpecialsUp(int key,int x,int y){
 
 void movement(){
   // speed up / slow down
-  if(ground[charCoords[0]][charCoords[1]-charH/2-1]){  // if on ground
+  if(ground[charCoords[0]][charCoords[1]-(running?charH/2:charW/2)-1]){  // if on ground
     if(charFrameY>2) charFrameY=0;
 
     if(keyStates[0] && jump){
@@ -357,9 +343,9 @@ void movement(){
     charCoords[0] = 2*wsize-charW/2;
     vel[0] = 0;
   }
-  if(ground[charCoords[0]][charCoords[1]-charH/2]){
+  if(ground[charCoords[0]][charCoords[1]-(running?charH/2:charW/2)]){
     int i;
-    while(ground[charCoords[0]][charCoords[1]-charH/2+i]) i++;  // make sure char is not in ground
+    while(ground[charCoords[0]][charCoords[1]-(running?charH/2:charW/2)+i]) i++;  // make sure char is not in ground
     charCoords[1] += i;
     vel[1] = 0;
   }
@@ -430,12 +416,7 @@ void hitDetection(){
        (stalactites[i+3] &&
 	(abs(charCoords[0]-stalactites[i]) < (charH+stalacH)/2) &&
 	(abs(charCoords[1]-stalactites[i+1]) < (charW+stalacW)/2))){
-      if(running){
-	int tmp = charW;
-	charW = charH;
-	charH = tmp;
-	running = false;
-      }
+      if(running) running = false;
       stalactites[i+2] = 1;
       keyStates[0] = keyStates[1] = keyStates[2] = 0;
       break;
@@ -477,7 +458,7 @@ int main(int argc,char* argv[]){
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
   glutInitWindowSize(2*wsize,wsize);
   glutInitWindowPosition(1280/2-wsize,(800-wsize)/2);
-  glutCreateWindow("Runner");
+  glutCreateWindow("CaveIn");
 
   makeRasterFont();
   createTextures();
