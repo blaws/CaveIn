@@ -28,6 +28,7 @@ GLubyte rectangleTexture[512][128][3],charTexture[16][128][3];
 GLubyte stalacTexture[16][64][3];
 GLuint rectangleObj,charObj,stalacObj;
 
+// resets variables
 void init(){
   int i,j;
   score=0;
@@ -50,6 +51,7 @@ void init(){
   stalactites.clear();
 }
 
+// creates character, ground, and stalactite textures
 void createTextures(){
   char filler[54];
   int i,j,k;
@@ -162,8 +164,6 @@ void display(){
   glLoadIdentity();
 
   // stalactites
-  //glEnable(GL_BLEND);
-  //glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
   glBindTexture(GL_TEXTURE_2D,stalacObj);
   int v1[2],v2[2],v3[2],v4[2],v5[2],dir;
   for(i=0;i<stalactites.size();i+=4){
@@ -197,7 +197,6 @@ void display(){
       }*/
     glEnd();
   }
-  //glDisable(GL_BLEND);
   glDisable(GL_TEXTURE_2D);
 
   // score
@@ -207,8 +206,8 @@ void display(){
   glRasterPos2i(2*wsize-10*i,wsize-20);
   printString(scoreStr);
 
-  // difficulty
-  i=0;
+  // difficulty (currently not shown)
+  /*i=0;
   while(spawnfreqV/(int)pow(10.0,i)) i++;  // find # of digits
   sprintf(scoreStr,"%d",spawnfreqV);
   glRasterPos2i(2*wsize-10*i,wsize-40);
@@ -217,7 +216,7 @@ void display(){
   while(spawnfreqH/(int)pow(10.0,i)) i++;  // find # of digits
   sprintf(scoreStr,"%d",spawnfreqH);
   glRasterPos2i(2*wsize-10*i,wsize-60);
-  printString(scoreStr);
+  printString(scoreStr);*/
 
   // Flush
   glutSwapBuffers();
@@ -252,6 +251,7 @@ void keyboard(unsigned char key,int x,int y){
       paused=false;
     }
     else paused=true;
+    break;
   default:
     break;
   }
@@ -294,6 +294,7 @@ void keyboardSpecialsUp(int key,int x,int y){
   }
 }
 
+// moves character
 void movement(){
   // speed up / slow down
   if(ground[charCoords[0]][charCoords[1]-(running?charH/2:charW/2)-1]){  // if on ground
@@ -351,6 +352,7 @@ void movement(){
   }
 }
 
+// creates, moves, and deletes stalactites
 void enemies(){
   int i,j;
   // generate
@@ -406,6 +408,7 @@ void enemies(){
   }
 }
 
+// character-to-stalactite, stalactite-to-ground, and stalactite-to-stalactite
 void hitDetection(){
   int i,j;
   for(i=0;i<stalactites.size();i+=4){
@@ -440,6 +443,7 @@ void hitDetection(){
   }
 }
 
+// is run every 50 ms
 void delay(int t){
   movement();
   enemies();
